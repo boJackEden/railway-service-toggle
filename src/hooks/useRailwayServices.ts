@@ -77,8 +77,17 @@ export function useRailwayServices() {
     stopPolling();
 
     let hasStatusChanged = false;
+    const startTime = Date.now();
+    const MAX_POLLING_DURATION = 10 * 60 * 1000; // 10 minutes in milliseconds
 
     const poll = async () => {
+      // Check if we've exceeded the maximum polling duration
+      const elapsedTime = Date.now() - startTime;
+      if (elapsedTime >= MAX_POLLING_DURATION) {
+        // Stop polling after 10 minutes
+        return;
+      }
+
       try {
         const res = await fetch("/api/railway/instances", {
           method: "POST",
@@ -139,7 +148,7 @@ export function useRailwayServices() {
     }
 
     try {
-      const res = await fetch("/api/railway/deployments/remove", {
+      const res = await fetch("/api/railway/deployments/stop", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -25,7 +25,7 @@ export function flattenMeToServiceRows(resp: RailwayMeResponse): {
           const ld = si.latestDeployment;
 
 
-          // Skip totally empty instances (optional)
+          // Skip totally empty instances
           if (!si?.serviceName) continue;
 
           rows.push({

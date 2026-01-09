@@ -106,6 +106,42 @@ That led to inspecting deployment-level mutations.
 This matches Railway’s real operational model while keeping the UX intuitive.
 
 ---
+## Critical Limitation: `deploymentStop` vs `deploymentRemove`
+
+### The Problem with `deploymentRemove`
+
+During development, I initially explored using `deploymentRemove` for the "Spin Down" action, as it mirrors the dashboard's "Remove deployment" functionality. However, this caused a critical issue:
+
+**After removing a deployment, subsequent redeploy attempts would fail.**
+
+The removed deployment seemed to leave the service in a state where `deploymentRedeploy` couldn't successfully bring it back up. This made the "Spin Up" functionality unreliable.
+
+### Why I Chose `deploymentStop`
+
+To work around this, I switched to using `deploymentStop` instead:
+- It stops the running containers without fully removing the deployment record
+- Future redeploys work consistently
+- Cleaner lifecycle: stop → redeploy works as expected
+
+**This is a deliberate architectural choice to ensure the app's core workflow remains functional.**
+
+---
+
+### Database Services Don't Work with `deploymentStop`
+
+However, `deploymentStop` has its own limitation: **it doesn't work on template-based database services** (Postgres, MySQL, Redis, etc.).
+
+**Observed behavior:**
+- App services (deployed from GitHub repos/Docker images) → `deploymentStop` works fine
+- Database services (from Railway templates) → `deploymentStop` fails or has no effect
+
+**Why this happens (POSSIBLY!!!!????):**
+Template databases are long-running stateful containers that don't go through traditional deployment cycles (build → deploy → success). They just run continuously with attached volumes. The `deploymentStop` mutation expects a "deployment" in the traditional sense, which databases don't have.
+
+**Impact on this app:**
+The toggle functionality works for application services but not databases. This is a known limitation I've accepted for this implementation.
+
+---
 
 ## UI State: Why Deployment Status Was Tricky
 
@@ -141,17 +177,6 @@ npm warn config production Use --omit=dev instead.
 - Railway builds were running with `production=true`
 - Dev dependencies (including `typescript`) were not installed
 - Redeploy triggered a true cold build, exposing this
-
-### Fix
-- Explicitly disabled production-only installs during build:
-
-NPM_CONFIG_PRODUCTION=false
-
-- This allowed devDependencies to be installed for the build phase
-
-Important note:
-- This had **nothing to do** with deployment stop/remove
-- It was a build configuration issue surfaced by redeploying
 
 ---
 
@@ -431,11 +456,31 @@ This would require:
 
 The current implementation collapses these into "Spin Up / Spin Down" for simplicity. A production tool would expose them as distinct, intentional actions.
 
+---
+
+### Unanswered Questions in the Community
+
+There's an open discussion in the Railway community about the difference between `deploymentStop` and `deploymentRemove`:
+
+**[Stopping a service without removing it - Railway Help Station](https://station.railway.com/questions/stopping-a-service-without-removing-it-36befbe1)**
+
+In this thread, a user asks:
+> "What is the difference between `deploymentStop` and `deploymentRemove`? Does stopping prevent charges?"
+
+**As of this writing, Railway has not provided an official answer.**
+
+This lack of documentation made development challenging:
+- No clear guidance on when to use each mutation
+- Couldn't figure out why one causes redeploy issues and the other doesn't work on databases
+- No information about the different lifecycle models for app vs database services
+
+---
+
 ## Possible improvement to the actual Railway UI
 Addmittedly I am a novice in Railway considering this is the first time I have used it but here are some suggestions for improvement.
 
 ### 1. Marking deployments with a number
-Because it's difficult to tell the difference between deployments with the same commit message I couldn't tell what was "happening" to my deployments thoughout their life cycle. When I "Removed" a deployment with the UI or "Stopped" a deployment programatically I couldn't tell what had happened to the deployment I had just taken action on in the UI. There should be a better way to tell deployments apart. Maybe just adding the deploymentId to reach deployment card in the UI would do. 
+Because it's difficult to tell the difference between deployments with the same commit message I couldn't tell what was "happening" to my deployments thoughout their life cycle. When I "Removed" a deployment with the UI or "Stopped" a deployment programatically I couldn't tell what had happened to the deployment I had just taken action on in the UI. There should be a better way to tell deployments apart. Maybe just adding the deploymentId to reach deployment card in the UI would do.
 
 ### 2. Update the "Stopping Container" message in the logs
 THis was a red herring message for me when trying to debug my app that would not deploy. I discovered later that the previous container is stopped when a new one is spun up so this is a reasonable message but because I was debugging a deployment that I couldn't keep alive, I confused this previous-container-stoppage as having to do with my current container I was trying to spin up not realizing this was an intended event whenever you spin up a new container. 
