@@ -6,6 +6,10 @@ The original prompt was deceptively simple:
 
 > “Build an application to spin up and spin down a container using our GraphQL API.”
 
+Additional advice:
+
+> “Time box this to 90 minutes” (<-- maybe for you but not for meeeeee :] I have taken a break from coding the last 9 months and I needed to read a lot about Railway)
+
 What follows is how that requirement was interpreted, challenged, refined, and ultimately implemented in a way that aligns with Railway’s real operational model.
 
 ---
