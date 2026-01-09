@@ -431,4 +431,11 @@ This would require:
 
 The current implementation collapses these into "Spin Up / Spin Down" for simplicity. A production tool would expose them as distinct, intentional actions.
 
+## Possible improvement to the actual Railway UI
+Addmittedly I am a novice in Railway considering this is the first time I have used it but here are some suggestions for improvement.
 
+### 1. Marking deployments with a number
+Because it's difficult to tell the difference between deployments with the same commit message I couldn't tell what was "happening" to my deployments thoughout their life cycle. When I "Removed" a deployment with the UI or "Stopped" a deployment programatically I couldn't tell what had happened to the deployment I had just taken action on in the UI. There should be a better way to tell deployments apart. Maybe just adding the deploymentId to reach deployment card in the UI would do. 
+
+### 2. Update the "Stopping Container" message in the logs
+THis was a red herring message for me when trying to debug my app that would not deploy. I discovered later that the previous container is stopped when a new one is spun up so this is a reasonable message but because I was debugging a deployment that I couldn't keep alive, I confused this previous-container-stoppage as having to do with my current container I was trying to spin up not realizing this was an intended event whenever you spin up a new container. 
