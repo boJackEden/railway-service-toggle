@@ -435,6 +435,16 @@ This would be especially valuable for:
 
 ---
 
+### 8. Make it work with DBs and other services?
+
+**Why it matters**
+- I assume you want to be able to remove/stop/pause/not-get-charged for those too. 
+
+**Implementation**
+- I assume this is something with my misunderstanding of the GQL APIs. Perhaps with some further explanation `deploymentRemove` would be the better option.
+
+---
+
 ## Architectural Considerations
 
 The current implementation uses:
