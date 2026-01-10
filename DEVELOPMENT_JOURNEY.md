@@ -18,6 +18,8 @@ What follows is how that requirement was interpreted, challenged, refined, and u
 
 After turning in this project last night, something didn't sit well with me.
 
+TLDR: I should have just looked through the Railway Network panel...
+
 I had built an app that technically worked, but it didn't actually *work*. It could stop deployments using `deploymentStop` and redeploy them using `deploymentRedeploy`, but it couldn't truly spin services up from a stopped state—which is what the actual Railway UI does. I was essentially reimplementing "restart" and calling it "spin up/down," which felt like I was missing the point.
 
 So I came back Saturday morning to dig deeper.
