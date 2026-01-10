@@ -10,11 +10,47 @@ Additional advice:
 
 > “Time box this to 90 minutes” (<-- maybe for you but not for meeeeee :] I have taken a break from coding the last 9 months and I needed to read a lot about Railway)
 
-What follows is how that requirement was interpreted, challenged, refined, and ultimately implemented in a way that aligns with Railway’s real operational model.
+What follows is how that requirement was interpreted, challenged, refined, and ultimately implemented in a way that aligns with Railway's real operational model.
 
 ---
 
-## Initial Interpretation: “Start / Stop a Service”
+## UPDATE (January 10th, 2026 - 14:25)
+
+After turning in this project last night, something didn't sit well with me.
+
+I had built an app that technically worked, but it didn't actually *work*. It could stop deployments using `deploymentStop` and redeploy them using `deploymentRedeploy`, but it couldn't truly spin services up from a stopped state—which is what the actual Railway UI does. I was essentially reimplementing "restart" and calling it "spin up/down," which felt like I was missing the point.
+
+So I came back Saturday morning to dig deeper.
+
+**The breakthrough:** `serviceInstanceDeploy`.
+
+This mutation doesn't redeploy an existing deployment—it creates a *new* deployment from the current source for a service instance. It only requires:
+- `environmentId`
+- `serviceId`
+
+No `deploymentId` needed. This is exactly what the Railway UI uses when you click "Deploy" on a stopped service.
+
+With that discovery, I also realized I could use `deploymentRemove` (which I had seen earlier but dismissed) to properly stop services instead of just restarting them.
+
+**What I updated:**
+1. Replaced `deploymentRedeploy` with `serviceInstanceDeploy` in the deploy route
+2. Changed from using `deploymentStop` to `deploymentRemove` for shutting down services
+3. Updated all validation logic to check for `serviceId`/`environmentId` for spin up, and `latestDeploymentId` for spin down
+4. Fixed the polling logic to handle services with `null` deployment status (databases that are fully stopped)
+5. Updated `getDeploymentAction` to return `SPIN_UP` when status is `null`, allowing users to restart stopped databases
+6. Changed optimistic UI updates to track by `serviceInstanceId` instead of `deploymentId` (since deployment IDs can change)
+
+**The result:**
+The app now works for both services (apps) AND databases. You can:
+- Spin down a running service → it gets removed (status becomes `null`)
+- Spin up a stopped service → new deployment is created from latest source
+- Works for databases that don't follow the traditional deployment model
+
+This is what I should have built from the start, but sometimes you need to sleep on it, and come back with fresh eyes to make it right. 
+
+---
+
+## Initial Interpretation: "Start / Stop a Service"
 
 **Initial assumption**
 - “Spin up / spin down” meant starting and stopping a *service*.

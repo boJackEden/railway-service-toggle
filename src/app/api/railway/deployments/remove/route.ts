@@ -3,12 +3,10 @@ import { NextResponse } from "next/server";
 
 const ENDPOINT = process.env.RAILWAY_GQL_ENDPOINT!;
 
-const DEPLOYMENT_REDEPLOY_MUTATION = `
-  mutation DeploymentRedeploy($id: String!, $usePreviousImageTag: Boolean!) {
-    deploymentRedeploy(id: $id, usePreviousImageTag: $usePreviousImageTag) {
-        status
-    }
-} 
+const DEPLOYMENT_REMOVE_MUTATION = `
+  mutation RemoveDeployment($id: String!) {
+    deploymentRemove(id: $id)
+  }
 `;
 
 export async function POST(req: Request) {
@@ -25,8 +23,8 @@ export async function POST(req: Request) {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        query: DEPLOYMENT_REDEPLOY_MUTATION,
-        variables: { id: deploymentId, usePreviousImageTag: true },
+        query: DEPLOYMENT_REMOVE_MUTATION,
+        variables: { id: deploymentId },
       }),
     });
 

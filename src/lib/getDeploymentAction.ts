@@ -1,12 +1,14 @@
 import { DeploymentAction, DeploymentStatus } from "@/types/railway";
 
 export function getDeploymentAction(status: DeploymentStatus | null): DeploymentAction {
-    if (!status) return "DISABLED";
-  
+    // If status is null, the service has no deployment (e.g., database that's been spun down)
+    // Allow the user to spin it up
+    if (!status) return "SPIN_UP";
+
     if (status === "SUCCESS" || status === "SLEEPING") {
       return "SPIN_DOWN";
     }
-  
+
     if (
       status === "REMOVED" ||
       status === "FAILED" ||
@@ -15,6 +17,6 @@ export function getDeploymentAction(status: DeploymentStatus | null): Deployment
     ) {
       return "SPIN_UP";
     }
-  
+
     return "DISABLED";
   }

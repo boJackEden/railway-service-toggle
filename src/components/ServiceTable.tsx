@@ -58,7 +58,7 @@ export function ServiceTable({ rows, onToggle }: { rows: ServiceRow[]; onToggle:
                   <button
                     onClick={() => onToggle(r)}
                     style={btn}
-                    disabled={st.label === 'Unknown'}
+                    disabled={getDeploymentAction(r.latestDeploymentStatus) === 'DISABLED'}
                     title={!r.region ? "Missing region for this instance" : ""}
                   >
                     {st.label === 'Running' ? 'Spin Down': 'Spin Up'}

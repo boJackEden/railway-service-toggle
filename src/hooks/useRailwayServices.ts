@@ -103,8 +103,9 @@ export function useRailwayServices() {
           // Note: We track by serviceInstanceId because deploymentId can change during redeploy
           const targetRow = rows.find(r => r.serviceInstanceId === serviceInstanceId);
 
-          if (targetRow && targetRow.latestDeploymentStatus) {
+          if (targetRow) {
             // Track if the status has changed from the initial status
+            // Note: latestDeploymentStatus can be null (e.g., for databases that are spun down)
             if (targetRow.latestDeploymentStatus !== initialStatus) {
               hasStatusChanged = true;
             }
@@ -116,10 +117,19 @@ export function useRailwayServices() {
             setMe(me);
             setRows(rows);
 
-            // Only stop polling if current status is terminal
-            if (targetRow && targetRow.latestDeploymentStatus && TERMINAL_STATUSES.has(targetRow.latestDeploymentStatus)) {
-              // Stop polling - deployment is complete
-              return;
+            // Stop polling if we've reached a terminal state
+            if (targetRow) {
+              const currentStatus = targetRow.latestDeploymentStatus;
+
+              // Terminal conditions:
+              // 1. Status is in TERMINAL_STATUSES set (SUCCESS, FAILED, etc.)
+              // 2. Status is null (service was spun down completely, e.g., databases)
+              const isTerminal = currentStatus === null || TERMINAL_STATUSES.has(currentStatus);
+
+              if (isTerminal) {
+                // Stop polling - deployment is complete
+                return;
+              }
             }
           }
 
@@ -148,7 +158,7 @@ export function useRailwayServices() {
     }
 
     try {
-      const res = await fetch("/api/railway/deployments/stop", {
+      const res = await fetch("/api/railway/deployments/remove", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -167,18 +177,24 @@ export function useRailwayServices() {
   async function spinUp(row: ServiceRow) {
     setError(null);
 
-    if (!row.latestDeploymentId) {
-      setError("No latestDeploymentId available for this row.");
+    if (!row.serviceId) {
+      setError("No serviceId available for this row.");
+      return;
+    }
+
+    if (!row.environmentId) {
+      setError("No environmentId available for this row.");
       return;
     }
 
     try {
-      const res = await fetch("/api/railway/deployments/redeploy", {
+      const res = await fetch("/api/railway/deployments/deploy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           token,
-          deploymentId: row.latestDeploymentId,
+          environmentId: row.environmentId,
+          serviceId: row.serviceId
         }),
       });
 
@@ -192,11 +208,6 @@ export function useRailwayServices() {
   async function toggleInstance(row: ServiceRow) {
     setError(null);
 
-    if (!row.latestDeploymentId) {
-      setError("No latestDeploymentId available for this row.");
-      return;
-    }
-
     if (!row.serviceInstanceId) {
       setError("No serviceInstanceId available for this row.");
       return;
@@ -209,6 +220,24 @@ export function useRailwayServices() {
       return;
     }
 
+    // For SPIN_DOWN, we need a deployment to stop
+    if (deploymentAction === 'SPIN_DOWN' && !row.latestDeploymentId) {
+      setError("No deployment available to stop.");
+      return;
+    }
+
+    // For SPIN_UP, we need serviceId and environmentId
+    if (deploymentAction === 'SPIN_UP') {
+      if (!row.serviceId) {
+        setError("No serviceId available for this row.");
+        return;
+      }
+      if (!row.environmentId) {
+        setError("No environmentId available for this row.");
+        return;
+      }
+    }
+
     if (deploymentAction === 'SPIN_DOWN') {
       // Store the initial status before starting
       const initialStatus = row.latestDeploymentStatus;
@@ -216,7 +245,7 @@ export function useRailwayServices() {
       // Optimistically update UI
       setRows(prevRows =>
         prevRows.map(r =>
-          r.latestDeploymentId === row.latestDeploymentId
+          r.serviceInstanceId === row.serviceInstanceId
             ? { ...r, latestDeploymentStatus: DeploymentStatus.REMOVING }
             : r
         )
@@ -233,7 +262,7 @@ export function useRailwayServices() {
       // Optimistically update UI
       setRows(prevRows =>
         prevRows.map(r =>
-          r.latestDeploymentId === row.latestDeploymentId
+          r.serviceInstanceId === row.serviceInstanceId
             ? { ...r, latestDeploymentStatus: DeploymentStatus.BUILDING }
             : r
         )

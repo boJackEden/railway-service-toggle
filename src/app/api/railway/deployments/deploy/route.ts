@@ -3,18 +3,19 @@ import { NextResponse } from "next/server";
 
 const ENDPOINT = process.env.RAILWAY_GQL_ENDPOINT!;
 
-const DEPLOYMENT_STOP_MUTATION = `
-  mutation StopDeployment($id: String!) {
-    deploymentStop(id: $id)
+const SERVICE_INSTANCE_DEPLOY_MUTATION = `
+  mutation ServiceInstanceDeploy($environmentId: String!, $serviceId: String!) {
+    serviceInstanceDeploy(environmentId: $environmentId, serviceId: $serviceId)
   }
 `;
 
 export async function POST(req: Request) {
   try {
-    const { token, deploymentId } = await req.json();
+    const { token, environmentId, serviceId } = await req.json();
 
     if (!token) return NextResponse.json({ error: "Missing token" }, { status: 400 });
-    if (!deploymentId) return NextResponse.json({ error: "Missing deploymentId" }, { status: 400 });
+    if (!environmentId) return NextResponse.json({ error: "Missing environmentId" }, { status: 400 });
+    if (!serviceId) return NextResponse.json({ error: "Missing serviceId" }, { status: 400 });
 
     const res = await fetch(ENDPOINT, {
       method: "POST",
@@ -23,8 +24,8 @@ export async function POST(req: Request) {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        query: DEPLOYMENT_STOP_MUTATION,
-        variables: { id: deploymentId },
+        query: SERVICE_INSTANCE_DEPLOY_MUTATION,
+        variables: { environmentId, serviceId },
       }),
     });
 
